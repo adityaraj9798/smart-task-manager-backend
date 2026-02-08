@@ -1,26 +1,66 @@
 const express = require("express");
+const User = require("../models/User");
+
 const router = express.Router();
-const jwt = require("jsonwebtoken");
 
-/**
- * TEMP SIMPLE LOGIN
- * (no DB user model yet – enough for precision demo)
- */
-router.post("/login", (req, res) => {
-  const { email, password } = req.body;
+/* 🔐 REGISTER */
+router.post("/register", async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
 
-  // simple hardcoded user (like demo accounts)
-  if (email !== "test@test.com" || password !== "123456") {
-    return res.status(401).json({ message: "Invalid credentials" });
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "All fields required" });
+    }
+
+    const exists = await User.findOne({ email });
+    if (exists) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    // password hashing handled by User model (pre-save)
+    const user = await User.create({ name, email, password });
+
+    res.status(201).json({
+      message: "User registered",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
+});
 
-  const token = jwt.sign(
-    { id: "000000000000000000000000" },
-    process.env.JWT_SECRET,
-    { expiresIn: "1d" }
-  );
+/* 🔐 LOGIN */
+router.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-  res.json({ token });
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    res.json({
+      message: "Login successful",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 module.exports = router;

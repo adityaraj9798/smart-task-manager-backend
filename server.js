@@ -3,38 +3,34 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
 
-// Ensure this filename is exactly "taskroutes.js" (all lowercase) in your routes folder
 const taskRoutes = require("./routes/taskroutes");
+const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 
-/* 🛠️ MIDDLEWARES */
-app.use(cors()); 
-app.use(express.json()); // Essential for receiving data from Frontend
+app.use(cors());
+app.use(express.json());
 
-/* 🚀 HEALTH CHECK ROUTE */
-app.get("/", (req, res) => {
-  res.send("Smart Task Manager API running 🚀");
+// 🔴 DEBUG ROUTE (VERY IMPORTANT)
+app.get("/debug", (req, res) => {
+  res.send("server.js is running");
 });
 
-/* 🛣️ ROUTES */
+// ROUTES
 app.use("/api/tasks", taskRoutes);
+app.use("/api/auth", authRoutes);
 
-/* 🔌 PORT CONFIGURATION */
-// We use 5000 as the primary because your .env uses 5000. 
 const PORT = process.env.PORT || 5001;
 
-/* 💾 DATABASE CONNECTION & SERVER START */
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("MongoDB connected ✅");
-    // Start server ONLY after DB connects
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT} 🚀`);
     });
   })
   .catch((err) => {
-    console.error("MongoDB Connection Error: ❌", err.message);
-    process.exit(1); // Stop the server if DB fails
+    console.error(err);
+    process.exit(1);
   });
